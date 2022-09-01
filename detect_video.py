@@ -1,3 +1,4 @@
+import shutil
 from datetime import datetime
 
 import cv2
@@ -5,7 +6,7 @@ import os
 from text_reader import run_tesseract, easy_osr_reader
 from math_helper import pythagorean_theorem
 
-video = cv2.VideoCapture('videos/video.mp4')
+video = cv2.VideoCapture('videos/video5.mp4')
 car_cascade = cv2.CascadeClassifier('haarcascade_russian_plate_number.xml')
 list_of_car_numbers = []
 
@@ -13,13 +14,14 @@ list_of_car_numbers = []
 def video_reader():
     directory_car_number = 0  # номер для папки с номерами машин
 
-    len_of_last_frame_obgects_detected: int = 0
-    last_frame_numbers: list = []   # list[list[list[x, y], № folder], list[list[x, y], № folder]]
+    len_of_last_frame_obgects_detected: list = []
+    last_frame_numbers: list = []  # list[list[list[x, y], № folder], list[list[x, y], № folder]]
 
     while True:
+
         _, frame = video.read()
 
-        cv2.rectangle(frame, (0, 720), (270, 600), (255, 0, 0), thickness=-1)
+        # cv2.rectangle(frame, (0, 720), (270, 600), (255, 0, 0), thickness=-1)
         gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
 
         rez = car_cascade.detectMultiScale(gray, scaleFactor=1.4,
@@ -36,14 +38,14 @@ def video_reader():
 
                 return_rez = []
 
-                was_written: bool = False  # была ли записанна фотография
+                was_written: bool = False  # переменная обозначающая была ли записанна фотография
                 for i in last_frame_numbers:
                     # cv2.line(frame, (x+w//2, y+h//2), i[0], (0, 0, 255), 5)
                     if pythagorean_theorem(i[0], center_of_current_number) < 200:
                         cv2.imwrite(f'cars/detected_numbers/{i[1]}_car/{datetime.today()}.jpeg', roi_color)
                         return_rez = [center_of_current_number, i[1]]
                         was_written = True
-                        continue
+                        break
 
                 if was_written is False:
                     os.mkdir('cars/detected_numbers/{}_car'.format(directory_car_number))
@@ -54,10 +56,12 @@ def video_reader():
                 last_frame_numbers.append(return_rez)
                 # cv2.circle(frame, (x + w // 2, y + h // 2), 5, (0, 0, 255), thickness=-1)
 
-            for i in range(len_of_last_frame_obgects_detected):
-                last_frame_numbers.pop(0)
+            while len(len_of_last_frame_obgects_detected) > 3:
+                for i in range(len_of_last_frame_obgects_detected[0]):
+                    last_frame_numbers.pop(0)
+                len_of_last_frame_obgects_detected.pop(0)
 
-            len_of_last_frame_obgects_detected = len(rez)
+            len_of_last_frame_obgects_detected.append(len(rez))
 
         cv2.imshow('video', frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -69,8 +73,12 @@ def video_reader():
 
 def main():
     i = 0
+
+    path_to_folder_with_car_numbers: str = r'cars/detected_numbers'
+    if os.path.isdir(path_to_folder_with_car_numbers):
+        shutil.rmtree(path_to_folder_with_car_numbers)
     try:
-        os.mkdir('cars/detected_numbers')
+        os.mkdir(path_to_folder_with_car_numbers)
     except:
         pass
     video_reader()
