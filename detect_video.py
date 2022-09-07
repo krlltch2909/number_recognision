@@ -6,7 +6,7 @@ import os
 from text_reader import run_tesseract, easy_osr_reader
 from car_adapter import Car_Adapter
 
-video = cv2.VideoCapture('videos/video5.mp4')
+video = cv2.VideoCapture('videos/video4.mp4')
 car_cascade = cv2.CascadeClassifier('haarcascade_russian_plate_number.xml')
 list_of_car_numbers = []
 
@@ -28,9 +28,11 @@ def video_reader():
         if len(rez) > 0:
             for (x, y, w, h) in rez:
                 cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                center_of_current_number = [x + w // 2, y + h // 2]
                 roi_color = frame[y:y + h, x:x + w]
-                car_adapter.find_plate(rez=rez, roi_color=roi_color)
+                car_adapter.find_plate(roi_color=roi_color, center_of_current_number=center_of_current_number)
 
+        car_adapter.clean_metod(rez=rez)
         cv2.imshow('video', frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break

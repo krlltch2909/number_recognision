@@ -38,12 +38,11 @@ def easy_osr_reader(img) -> list:
 
 
 def main():
-    img = cv2.imread('numbers/number.jpeg')
+    img = cv2.imread('numbers/img4.jpeg')
     print('tesseract ' + run_tesseract(img))
     print('easy_osr ' + str(easy_osr_reader(img)))
 
 
 if __name__ == '__main__':
     main()
-    cv2.waitKey(0)
 
