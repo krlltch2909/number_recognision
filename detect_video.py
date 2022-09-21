@@ -1,17 +1,21 @@
+import multiprocessing
 import shutil
-from datetime import datetime
 
 import cv2
 import os
-from text_reader import run_tesseract, easy_osr_reader
+import sqlite3
+import time
+
+from worker import image_processing
 from car_adapter import Car_Adapter
 
-video = cv2.VideoCapture('videos/video4.mp4')
+video = cv2.VideoCapture('videos/video3.mp4')
 car_cascade = cv2.CascadeClassifier('haarcascade_russian_plate_number.xml')
 list_of_car_numbers = []
 
 
 def video_reader():
+    detect_num = 0
     car_adapter = Car_Adapter()
     while True:
 
@@ -27,14 +31,19 @@ def video_reader():
                                            flags=cv2.CASCADE_SCALE_IMAGE)
         if len(rez) > 0:
             for (x, y, w, h) in rez:
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
                 center_of_current_number = [x + w // 2, y + h // 2]
                 roi_color = frame[y:y + h, x:x + w]
-                car_adapter.find_plate(roi_color=roi_color, center_of_current_number=center_of_current_number)
+                car_adapter.find_plate(roi_color=roi_color, center_of_current_number=center_of_current_number, )
 
+        if len(rez) > 0:
+            for (x, y, w, h) in rez:
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+
+        detect_num += len(rez)
         car_adapter.clean_metod(rez=rez)
         cv2.imshow('video', frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
+            print("all number was detected - "+str(detect_num))
             break
 
     video.release()
@@ -42,35 +51,46 @@ def video_reader():
 
 
 def main():
-    i = 0
+    queue = multiprocessing.Queue()
+    locker = multiprocessing.Lock()
 
+    Car_Adapter(queue=queue)
     path_to_folder_with_car_numbers: str = r'cars/detected_numbers'
     if os.path.isdir(path_to_folder_with_car_numbers):
         shutil.rmtree(path_to_folder_with_car_numbers)
+
     try:
         os.mkdir(path_to_folder_with_car_numbers)
     except:
         pass
+
+    processes = []
+    for i in range(3):
+        pr = multiprocessing.Process(target=image_processing, args=(queue, locker,), daemon=True)
+        pr.start()
+        processes.append(pr)
     video_reader()
-    print(len(list_of_car_numbers))
+
     print("wait ...")
-    # for img in list_of_car_numbers:
-    #     tessertact_text = run_tesseract(img)
-    #     easyosr_text = easy_osr_reader(img)
-    #
-    #     cv2.imshow('image' + str(i), img)
-    #     # print("number = " + str(i) +
-    #     #       "\t| tesseract = " + str(tessertact_text) +
-    #     #       "\t| easyosr = " + str(easyosr_text)
-    #     #       )
-    #
-    #     with open('find_numbers', "a") as file:
-    #         file.write(f"number - {i}\t tesseract - {tessertact_text}\t easyosr - {easyosr_text}\n\n")
-    #     i += 1
+
+    while queue.empty() is False:
+        time.sleep(1)
+
+    print("sleep for 5 seconds")
+    time.sleep(15)
+
+    # for i in processes:
+    #     i.terminate()
 
     print("end of reading text")
-    # cv2.waitKey(0)
 
 
 if __name__ == '__main__':
+    db = sqlite3.connect('server.db')
+    cursor = db.cursor()
+    cursor.execute("DROP TABLE IF EXISTS cars")
+    db.commit()
+    cursor.execute("CREATE TABLE IF NOT EXISTS cars (car_id TEXT, image INTEGER, number TEXT)")
+
+    db.commit()
     main()

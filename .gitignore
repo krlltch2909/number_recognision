@@ -6,3 +6,4 @@ videos/
 .gitignore
 .DS_Store
 cars/
+server.db
