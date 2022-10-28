@@ -1,13 +1,17 @@
 import multiprocessing
-
 from copy import deepcopy
-
-import cv2
 
 from math_helper import pythagorean_theorem
 
+# ppadp for python
+class FrameNumbers(object):
+    def __init__(self, coords: list, folder: int, buffer: list, ):
+        self.coords = coords
+        self.folder = folder
+        self.buffer = buffer
 
-class Car_Adapter:
+
+class CarAdapter:
     __instance = None
 
     queue = None
@@ -23,7 +27,7 @@ class Car_Adapter:
 
     def __new__(cls, *args, **kwargs):
         if cls.__instance is None:
-            cls.__instance = super(Car_Adapter, cls).__new__(cls)
+            cls.__instance = super(CarAdapter, cls).__new__(cls)
             cls.__instance.queue = kwargs['queue']
         return cls.__instance
 
@@ -37,11 +41,6 @@ class Car_Adapter:
         :return: None
         """
 
-        # img = cv2.resize(roi_color, None, fx=6, fy=6, interpolation=cv2.INTER_CUBIC)
-        # size = img.shape
-        #
-        # # print(size)
-        # roi_color = img[40:size[0] - 25, 15:size[1] - 40]
         return_rez = []
         was_written: bool = False  # переменная обозначающая была ли записанна фотография
 

@@ -4,6 +4,8 @@ import numpy as np
 import cv2
 from string import digits, ascii_uppercase, ascii_lowercase
 
+car_cascade = cv2.CascadeClassifier('haarcascade_russian_plate_number.xml')
+
 
 def run_tesseract(img) -> str:
     """
@@ -14,46 +16,18 @@ def run_tesseract(img) -> str:
         alphanumeric = "" + digits + ascii_uppercase
         options = f' --oem 3 --psm 7 -c tessedit_char_whitelist={alphanumeric}'
 
-    # image_copy = img.copy()
-    # image_copy = cv2.resize(image_copy, None, fx=8, fy=8, interpolation=cv2.INTER_CUBIC)
-    #
-    # gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-    #
-    # img = cv2.resize(gray, None, fx=10, fy=10, interpolation=cv2.INTER_CUBIC)
-    #
-    # img = cv2.medianBlur(img, 5)
-    # img = cv2.GaussianBlur(img, (5, 5), 0)
-    # img = cv2.dilate(img, (5, 5), iterations=1)
-    # img = cv2.erode(img, (5, 5), iterations=1)
-    #
-    # ret, thresh = cv2.threshold(img, 75, 255, cv2.THRESH_BINARY)
-    #
-    #
-    #
-    # contours, hierarchy = cv2.findContours(image=thresh, mode=cv2.RETR_CCOMP, method=cv2.CHAIN_APPROX_SIMPLE)
-    # cv2.drawContours(image=image_copy, contours=contours[:5], contourIdx=-1, color=(0, 0, 255), thickness=2,
-    #                  lineType=cv2.LINE_AA)
+        img = cv2.resize(img, None, fx=5, fy=5, interpolation=cv2.INTER_CUBIC)
 
-    # licensePlate = None
-    # text = ''
-    # for c in contours[:10]:
-    #
-    #     (x, y, w, h) = cv2.boundingRect(c)
-    #     ar = w / float(h)
-    #
-    #     if ar >= 4 and ar <= 5:
-    #         licensePlate = thresh[y:y + h, x:x + w]
-    #
-    #         cv2.imshow('image', licensePlate)
+        gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
+        img = cv2.medianBlur(gray, 5)
+        # img = cv2.GaussianBlur(img, (5, 5), 0)
+        img = cv2.dilate(img, (5, 5), iterations=3)
+        # img = cv2.erode(img, (5, 5), iterations=1)
 
-    # thresh = cv2.threshold(img, 100, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
-    # img = cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 31, 3)
+        thresh = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
 
-
-
-    # cv2.imshow('thresh', thresh)
-        text: str = pytesseract.image_to_string(img, config=options)
+        text: str = pytesseract.image_to_string(thresh, config=options)
 
         return text
     except:
@@ -66,10 +40,21 @@ def easy_osr_reader(img) -> list:
     :return: text which was read from image
     """
 
-    img = cv2.resize(img, None, fx=2, fy=2, interpolation=cv2.INTER_AREA)
+    img = cv2.resize(img, None, fx=20, fy=20, interpolation=cv2.INTER_CUBIC)
+    gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    gray = cv2.medianBlur(gray, 7)
+    gray = cv2.GaussianBlur(gray, (5, 5), 5)
+
+    cv2.imshow('gray', gray)
+
+    thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 201, 7)
+    thresh = cv2.dilate(thresh, (5, 5), iterations=5)
+
+    # img = cv2.resize(img, None, fx=2, fy=2, interpolation=cv2.INTER_AREA)
+    cv2.imshow('thresh_before', thresh)
     reader = easyocr.Reader(['en'], gpu=True, verbose=False)
-    text = reader.readtext(img, detail=0, paragraph=True)
-    return text
+    text = reader.readtext(thresh, detail=0, paragraph=True)
+    return text[0]
 
 
 def main():
