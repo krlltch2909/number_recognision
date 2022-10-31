@@ -3,6 +3,7 @@ venv/
 __pycache__/
 numbers/
 videos/
+.DS_Store/
 .gitignore
 .DS_Store
 cars/
